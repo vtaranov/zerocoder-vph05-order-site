@@ -1,9 +1,12 @@
 from contextlib import asynccontextmanager
+import logging
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from fastapi.responses import JSONResponse
 from app.core.database import Base, engine
 from app.routes import services, applications
 
@@ -26,3 +29,8 @@ def docs():
 def health():
     with engine.connect() as conn: conn.execute(text("SELECT 1"))
     return {"status": "ok", "database": "connected"}
+
+@app.exception_handler(SQLAlchemyError)
+async def database_error(request, exc):
+    logging.getLogger("uvicorn.error").error("Database unavailable", exc_info=exc)
+    return JSONResponse(status_code=503, content={"detail": "База данных временно недоступна. Данные остались в форме - попробуйте ещё раз."})

@@ -45,3 +45,14 @@ def test_complete_flow_and_validation():
     assert client.get(f"/api/admin/applications/{app_id}/metrics", auth=auth).status_code == 404
     assert client.put(f"/api/admin/services/{service_id}", json={**service,"budget_max":40000},auth=auth).status_code == 200
     assert client.delete(f"/api/admin/services/{service_id}", auth=auth).status_code == 204
+
+def test_database_failure_is_actionable(monkeypatch):
+    from sqlalchemy.exc import OperationalError
+    from app.models.service import ServiceCRUD
+    def fail(db):
+        raise OperationalError("SELECT", {}, Exception("database offline"))
+    monkeypatch.setattr(ServiceCRUD, "all", fail)
+    response = client.get("/api/services")
+    assert response.status_code == 503
+    assert "временно недоступна" in response.json()["detail"]
+    assert "SELECT" not in response.text

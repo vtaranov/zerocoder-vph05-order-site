@@ -87,6 +87,8 @@ form.addEventListener('submit', async event => {
   $('submit-status').textContent = '';
   try {
     const response = await fetch('/api/applications', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    const isJSON = (response.headers.get('content-type') || '').includes('application/json');
+    if (!isJSON) throw new Error('Сервис временно недоступен. Ваши данные остались в форме - попробуйте ещё раз.');
     const result = await response.json();
     if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : 'Проверьте заполнение формы.');
     showStatus(`${result.message} Номер: ${result.id}. Мы свяжемся с вами удобным способом.`, 'success');
